@@ -1,42 +1,45 @@
-import React, { useState, useEffect } from 'react';
-
-const debounce = (func, delay) => {
-  let timer;
-  return function (...args) {
-    clearTimeout(timer);
-    timer = setTimeout(() => func.apply(this, args), delay);
-  };
-};
+import React, { useState } from 'react';
 
 export default function App() {
   const [query, setQuery] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [loading, setLoading] = useState(false);
 
-  const fetchSuggestions = async (searchQuery) => {
+  // Gestisce l'input dell'utente e fa la ricerca
+  const handleInputChange = (e) => {
+    const searchQuery = e.target.value;
+    setQuery(searchQuery);
+
+    // Svuota i risultati se l'input è vuoto
     if (!searchQuery) {
       setSuggestions([]);
       return;
     }
 
     setLoading(true);
-    try {
-      const response = await fetch(
-        `https://boolean-spec-frontend.vercel.app/freetestapi/products?search=${searchQuery}`
-      );
-      const data = await response.json();
-      setSuggestions(data);
-    } catch (error) {
-      console.error('Errore durante il fetch dei suggerimenti:', error);
-    } finally {
-      setLoading(false);
-    }
-  };
 
-  const debouncedFetchSuggestions = debounce(fetchSuggestions, 300);
-  useEffect(() => {
-    debouncedFetchSuggestions(query);
-  }, [query]);
+    // Debounce per evitare troppe chiamate API
+    setTimeout(() => {
+      // Chiamata API per prendere i prodotti
+      fetch(
+        `https://boolean-spec-frontend.vercel.app/freetestapi/products?search=${searchQuery}`
+      )
+        .then((response) => {
+          if (!response.ok) {
+            throw new Error('Errore nella risposta API');
+          }
+          return response.json();
+        })
+        .then((data) => {
+          setSuggestions(data);
+          setLoading(false);
+        })
+        .catch((error) => {
+          console.error('Errore durante il fetch dei suggerimenti:', error);
+          setLoading(false);
+        });
+    }, 800);
+  };
 
   return (
     <div>
@@ -45,7 +48,7 @@ export default function App() {
         type="text"
         placeholder="Cerca un prodotto..."
         value={query}
-        onChange={(e) => setQuery(e.target.value)}
+        onChange={handleInputChange}
       />
 
       {loading && <p>Caricamento...</p>}
